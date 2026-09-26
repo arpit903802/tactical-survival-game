@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>NEXUS // TACTICAL SURVIVAL ARENA</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #05050a; color: #e2e8f0; overflow: hidden; font-family: monospace; touch-action: none; }
+        canvas { background: #09090f; box-shadow: 0 0 30px rgba(16, 185, 129, 0.15); }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-between h-screen w-screen select-none p-2">
+
+    <!-- HUD Overlay -->
+    <div id="hud" class="w-full max-w-[800px] flex justify-between items-center px-4 py-2 bg-zinc-900/90 border border-zinc-800 rounded-xl text-[10px] md:text-xs tracking-wider">
+        <div class="flex items-center space-x-3 md:space-x-6">
+            <div>HP: <span id="hpVal" class="text-emerald-400 font-bold">200</span>/200</div>
+            <div>WEAPON: <span id="weaponVal" class="text-amber-400 font-bold">Pistol</span></div>
+        </div>
+        <div class="text-center font-mono text-emerald-500 font-bold text-xs tracking-widest">
+            LVL <span id="levelVal">1</span>
+        </div>
+        <div class="flex items-center space-x-3 md:space-x-6">
+            <div>ENEMIES: <span id="enemyVal" class="text-red-400 font-bold">0</span></div>
+            <div>SCORE: <span id="scoreVal" class="text-zinc-200 font-bold">0</span></div>
+        </div>
+    </div>
+
+    <!-- Game Canvas Container -->
+    <div class="relative flex-grow flex items-center justify-center w-full">
+        <canvas id="gameCanvas" width="800" height="450" class="rounded-xl border border-zinc-800 max-w-full max-h-[60vh]"></canvas>
+        
+        <!-- Overlay Screen -->
+        <div id="overlay" class="absolute inset-0 bg-zinc-950/95 flex flex-col items-center justify-center space-y-4 p-4 rounded-xl backdrop-blur-md">
+            <h1 id="overlayTitle" class="text-lg md:text-2xl font-bold tracking-widest text-emerald-400 text-center">TACTICAL SURVIVAL ARENA</h1>
+            <p id="overlayDesc" class="text-[11px] md:text-xs text-zinc-400 text-center max-w-sm">Hunt weapons, scavenge medikits, eliminate hostile units, and survive escalating combat tiers.</p>
+            <button id="actionBtn" onclick="startGame()" class="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-zinc-950 font-bold text-xs tracking-widest rounded-lg transition-all shadow-lg shadow-emerald-950/50">
+                INITIATE MISSION
+            </button>
+        </div>
+    </div>
+
+    <!-- Mobile Touch Controls Bar -->
+    <div class="w-full max-w-[800px] flex justify-between items-center px-4 py-3 bg-zinc-900/90 border border-zinc-800 rounded-xl mb-1">
+        <!-- D-Pad Virtual Buttons -->
+        <div class="grid grid-cols-3 gap-1 w-36 h-24">
+            <div></div>
+            <button id="btnUp" class="bg-zinc-800 active:bg-emerald-600 rounded-lg text-zinc-300 font-bold flex items-center justify-center text-sm">▲</button>
+            <div></div>
+            <button id="btnLeft" class="bg-zinc-800 active:bg-emerald-600 rounded-lg text-zinc-300 font-bold flex items-center justify-center text-sm">◀</button>
+            <button id="btnDown" class="bg-zinc-800 active:bg-emerald-600 rounded-lg text-zinc-300 font-bold flex items-center justify-center text-sm">▼</button>
+            <button id="btnRight" class="bg-zinc-800 active:bg-emerald-600 rounded-lg text-zinc-300 font-bold flex items-center justify-center text-sm">▶</button>
+        </div>
+        <!-- Action Buttons (Shoot & Medikit) -->
+        <div class="flex space-x-3">
+            <button id="btnMed" onclick="useMedikit()" class="px-4 py-3 bg-emerald-700 active:bg-emerald-500 text-white font-bold text-[10px] md:text-xs rounded-xl shadow-lg border border-emerald-500/30">
+                MEDIKIT (<span id="medCount">1</span>)
+            </button>
+            <button id="btnShoot" class="px-6 py-3 bg-red-600 active:bg-red-500 text-white font-bold text-xs tracking-wider rounded-xl shadow-lg border border-red-500/30">
+                FIRE
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+
+        let gameState = "START";
+        let score = 0;
+        let level = 1;
+        let medikitsHeld = 1;
+
+        let player = {
+            x: 400,
+            y: 225,
+            radius: 12,
+            speed: 3.2,
+            hp: 200,
+            maxHp: 200,
+            angle: 0,
+            weapon: "Pistol",
+            fireRate: 350,
+            lastShot: 0,
+            damage: 25
+        };
+
+        let bullets = [];
+        let enemies = [];
+        let items = [];
+        let particles = [];
+
+        // Control States
+        let moveUp = false, moveDown = false, moveLeft = false, moveRight = false, isFiring = false;
+
+        // Touch Listeners for Virtual D-Pad
+        const bindTouch = (id, startCb, endCb) => {
+            const el = document.getElementById(id);
+            el.addEventListener("touchstart", (e) => { e.preventDefault(); startCb(); });
+            el.addEventListener("touchend", (e) => { e.preventDefault(); endCb(); });
+            el.addEventListener("mousedown", (e) => { e.preventDefault(); startCb(); });
+            el.addEventListener("mouseup", (e) => { e.preventDefault(); endCb(); });
+        };
+
+        bindTouch("btnUp", () => moveUp = true, () => moveUp = false);
+        bindTouch("btnDown", () => moveDown = true, () => moveDown = false);
+        bindTouch("btnLeft", () => moveLeft = true, () => moveLeft = false);
+        bindTouch("btnRight", () => moveRight = true, () => moveRight = false);
+        bindTouch("btnShoot", () => isFiring = true, () => isFiring = false);
+
+        function startGame() {
+            score = 0;
+            level = 1;
+            player.hp = 200;
+            player.weapon = "Pistol";
+            player.damage = 25;
+            player.fireRate = 350;
+            medikitsHeld = 1;
+            document.getElementById("overlay").classList.add("hidden");
+            gameState = "PLAYING";
+            initLevel();
+        }
+
+        function initLevel() {
+            enemies = [];
+            items = [];
+            bullets = [];
+            
+            let enemyCount = 3 + level * 2;
+            for (let i = 0; i < enemyCount; i++) {
+                let ex, ey;
+                do {
+                    ex = Math.random() * (canvas.width - 60) + 30;
+                    ey = Math.random() * (canvas.height - 60) + 30;
+                } while (Math.hypot(ex - player.x, ey - player.y) < 120);
+
+                enemies.push({
+                    x: ex,
+                    y: ey,
+                    radius: 14,
+                    speed: 1.2 + level * 0.15,
+                    hp: 35 + level * 12,
+                    maxHp: 35 + level * 12,
+                    damage: 8 + level * 2,
+                    color: level > 2 ? '#ef4444' : '#f97316'
+                });
+            }
+
+            // Spawn Medikits on map
+            for (let i = 0; i < 2; i++) {
+                items.push({
+                    x: Math.random() * 700 + 50,
+                    y: Math.random() * 350 + 50,
+                    type: 'medikit',
+                    radius: 10
+                });
+            }
+
+            // Spawn Advanced Weapon Drop on even levels
+            if (level % 2 === 0) {
+                items.push({
+                    x: Math.random() * 700 + 50,
+                    y: Math.random() * 350 + 50,
+                    type: 'weapon',
+                    name: level === 2 ? 'Shotgun' : 'Assault Rifle',
+                    radius: 12
+                });
+            }
+
+            updateHUD();
+        }
+
+        function useMedikit() {
+            if (medikitsHeld > 0 && player.hp < player.maxHp) {
+                player.hp = Math.min(player.maxHp, player.hp + 60);
+                medikitsHeld--;
+                updateHUD();
+            }
+        }
+
+        function updateHUD() {
+            document.getElementById("hpVal").innerText = Math.max(0, Math.floor(player.hp));
+            document.getElementById("weaponVal").innerText = player.weapon;
+            document.getElementById("levelVal").innerText = level;
+            document.getElementById("enemyVal").innerText = enemies.length;
+            document.getElementById("scoreVal").innerText = score;
+            document.getElementById("medCount").innerText = medikitsHeld;
+        }
+
+        function spawnParticles(x, y, color, count = 5) {
+            for (let i = 0; i < count; i++) {
+                particles.push({
+                    x: x, y: y,
+                    vx: (Math.random() - 0.5) * 4,
+                    vy: (Math.random() - 0.5) * 4,
+                    alpha: 1, color: color,
+                    decay: Math.random() * 0.04 + 0.02
+                });
+            }
+        }
+
+        function shoot() {
+            let now = Date.now();
+            if (now - player.lastShot < player.fireRate) return;
+            player.lastShot = now;
+
+            let angle = player.angle;
+            if (player.weapon === "Shotgun") {
+                for (let a = -0.2; a <= 0.2; a += 0.2) {
+                    bullets.push({ x: player.x, y: player.y, vx: Math.cos(angle + a) * 8, vy: Math.sin(angle + a) * 8, damage: 20, range: 250 });
+                }
+            } else if (player.weapon === "Assault Rifle") {
+                bullets.push({ x: player.x, y: player.y, vx: Math.cos(angle) * 11, vy: Math.sin(angle) * 11, damage: 30, range: 500 });
+            } else {
+                bullets.push({ x: player.x, y: player.y, vx: Math.cos(angle) * 9, vy: Math.sin(angle) * 9, damage: 25, range: 400 });
+            }
+        }
+
+        function update() {
+            if (gameState !== "PLAYING") return;
+
+            let dx = 0, dy = 0;
+            if (moveUp) dy -= 1;
+            if (moveDown) dy += 1;
+            if (moveLeft) dx -= 1;
+            if (moveRight) dx += 1;
+
+            if (dx !== 0 && dy !== 0) { dx *= 0.7071; dy *= 0.7071; }
+
+            player.x = Math.max(player.radius, Math.min(canvas.width - player.radius, player.x + dx * player.speed));
+            player.y = Math.max(player.radius, Math.min(canvas.height - player.radius, player.y + dy * player.speed));
+
+            // Auto-aim nearest enemy
+            if (enemies.length > 0) {
+                let closest = enemies[0];
+                let minDist = Math.hypot(closest.x - player.x, closest.y - player.y);
+                for (let e of enemies) {
+                    let dist = Math.hypot(e.x - player.x, e.y - player.y);
+                    if (dist < minDist) { minDist = dist; closest = e; }
+                }
+                player.angle = Math.atan2(closest.y - player.y, closest.x - player.x);
+            }
+
+            if (isFiring) shoot();
+
+            // Bullets update
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                let b = bullets[i];
+                b.x += b.vx; b.y += b.vy; b.range -= Math.hypot(b.vx, b.vy);
+                if (b.range <= 0 || b.x < 0 || b.x > canvas.width || b.y < 0 || b.y > canvas.height) {
+                    bullets.splice(i, 1); continue;
+                }
+
+                for (let j = enemies.length - 1; j >= 0; j--) {
+                    let e = enemies[j];
+                    if (Math.hypot(b.x - e.x, b.y - e.y) < e.radius) {
+                        e.hp -= b.damage;
+                        spawnParticles(b.x, b.y, '#facc15', 2);
+                        bullets.splice(i, 1);
+                        if (e.hp <= 0) {
+                            spawnParticles(e.x, e.y, '#ef4444', 10);
+                            score += 100 * level;
+                            enemies.splice(j, 1);
+                            if (Math.random() < 0.35) {
+                                medikitsHeld++; // Drop medikit count
+                            }
+                        }
+                        break;
+                    }
+                }
+            }
+
+            // Enemies update
+            for (let e of enemies) {
+                let angle = Math.atan2(player.y - e.y, player.x - e.x);
+                e.x += Math.cos(angle) * e.speed;
+                e.y += Math.sin(angle) * e.speed;
+
+                if (Math.hypot(player.x - e.x, player.y - e.y) < player.radius + e.radius) {
+                    player.hp -= e.damage * 0.04;
+                    if (player.hp <= 0) gameOver();
+                }
+            }
+
+            // Items pickup
+            for (let i = items.length - 1; i >= 0; i--) {
+                let item = items[i];
+                if (Math.hypot(player.x - item.x, player.y - item.y) < player.radius + item.radius) {
+                    if (item.type === 'medikit') {
+                        medikitsHeld++;
+                    } else if (item.type === 'weapon') {
+                        player.weapon = item.name;
+                        if (item.name === 'Shotgun') { player.fireRate = 600; player.damage = 20; }
+                        else if (item.name === 'Assault Rifle') { player.fireRate = 130; player.damage = 30; }
+                    }
+                    items.splice(i, 1);
+                }
+            }
+
+            if (enemies.length === 0) {
+                level++;
+                gameState = "LEVEL_TRANSITION";
+                document.getElementById("overlayTitle").innerText = `LEVEL ${level - 1} CLEARED`;
+                document.getElementById("overlayDesc").innerText = `Hostiles eliminated. Tier ${level} approaching.`;
+                document.getElementById("actionBtn").innerText = `PROCEED TO LEVEL ${level}`;
+                document.getElementById("overlay").classList.remove("hidden");
+            }
+
+            updateHUD();
+        }
+
+        function draw() {
+            ctx.fillStyle = "#09090f";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Cyberpunk Grid Lines
+            ctx.strokeStyle = "#12121c";
+            ctx.lineWidth = 1;
+            for (let x = 0; x < canvas.width; x += 40) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke(); }
+            for (let y = 0; y < canvas.height; y += 40) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke(); }
+
+            // Items
+            for (let item of items) {
+                ctx.save();
+                ctx.translate(item.x, item.y);
+                if (item.type === 'medikit') {
+                    ctx.fillStyle = "#10b981"; ctx.fillRect(-7, -7, 14, 14);
+                    ctx.fillStyle = "#ffffff"; ctx.fillRect(-2, -5, 4, 10); ctx.fillRect(-5, -2, 10, 4);
+                } else {
+                    ctx.fillStyle = "#f59e0b"; ctx.beginPath(); ctx.arc(0, 0, item.radius, 0, Math.PI * 2); ctx.fill();
+                }
+                ctx.restore();
+            }
+
+            // Bullets
+            ctx.fillStyle = "#facc15";
+            for (let b of bullets) { ctx.beginPath(); ctx.arc(b.x, b.y, 3, 0, Math.PI * 2); ctx.fill(); }
+
+            // Enemies
+            for (let e of enemies) {
+                ctx.save();
+                ctx.translate(e.x, e.y);
+                ctx.fillStyle = e.color; ctx.beginPath(); ctx.arc(0, 0, e.radius, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = "rgba(0,0,0,0.5)"; ctx.fillRect(-12, -20, 24, 4);
+                ctx.fillStyle = "#ef4444"; ctx.fillRect(-12, -20, (e.hp / e.maxHp) * 24, 4);
+                ctx.restore();
+            }
+
+            // Player
+            ctx.save();
+            ctx.translate(player.x, player.y);
+            ctx.rotate(player.angle);
+            ctx.fillStyle = "#71717a"; ctx.fillRect(0, -2, 16, 4);
+            ctx.fillStyle = "#10b981"; ctx.beginPath(); ctx.arc(0, 0, player.radius, 0, Math.PI * 2); ctx.fill();
+            ctx.strokeStyle = "#047857"; ctx.lineWidth = 2; ctx.stroke();
+            ctx.restore();
+
+            // Particles
+            for (let i = particles.length - 1; i >= 0; i--) {
+                let p = particles[i];
+                p.x += p.vx; p.y += p.vy; p.alpha -= p.decay;
+                if (p.alpha <= 0) { particles.splice(i, 1); continue; }
+                ctx.fillStyle = p.color; ctx.globalAlpha = p.alpha; ctx.fillRect(p.x, p.y, 3, 3); ctx.globalAlpha = 1.0;
+            }
+        }
+
+        function gameOver() {
+            gameState = "GAMEOVER";
+            document.getElementById("overlayTitle").innerText = "MISSION FAILED";
+            document.getElementById("overlayDesc").innerText = `Final Score: ${score} | Reached Level: ${level}`;
+            document.getElementById("actionBtn").innerText = "RE-ENGAGE MISSION";
+            document.getElementById("overlay").classList.remove("hidden");
+        }
+
+        function loop() { update(); draw(); requestAnimationFrame(loop); }
+        requestAnimationFrame(loop);
+    </script>
+</body>
+</html>
