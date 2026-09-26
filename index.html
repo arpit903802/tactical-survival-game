@@ -3,61 +3,65 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>NEXUS // TACTICAL SURVIVAL ARENA - ADVANCED</title>
+    <title>BATTLE ROYALE // SURVIVAL OPS</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { background-color: #030307; color: #e2e8f0; overflow: hidden; font-family: monospace; touch-action: none; }
-        canvas { background: #07070c; box-shadow: 0 0 40px rgba(16, 185, 129, 0.2); }
+        body { background-color: #020205; color: #e2e8f0; overflow: hidden; font-family: monospace; touch-action: none; }
+        canvas { background: #06060a; box-shadow: 0 0 50px rgba(239, 68, 68, 0.15); }
     </style>
 </head>
 <body class="flex flex-col items-center justify-between h-screen w-screen select-none p-1 md:p-2">
 
-    <!-- HUD Overlay -->
-    <div id="hud" class="w-full max-w-[850px] flex justify-between items-center px-4 py-2 bg-zinc-900/95 border border-zinc-800/80 rounded-xl text-[10px] md:text-xs tracking-wider shadow-lg">
-        <div class="flex items-center space-x-3 md:space-x-6">
+    <!-- HUD Header -->
+    <div class="w-full max-w-[900px] flex justify-between items-center px-4 py-2 bg-zinc-900/95 border border-zinc-800 rounded-xl text-[10px] md:text-xs tracking-wider shadow-xl">
+        <div class="flex items-center space-x-3 md:space-x-5">
             <div>HP: <span id="hpVal" class="text-emerald-400 font-bold">200</span>/200</div>
-            <div>WEAPON: <span id="weaponVal" class="text-amber-400 font-bold">Assault Rifle</span></div>
+            <div>ARMOR: <span id="armorVal" class="text-cyan-400 font-bold">100</span></div>
+            <div>GUN: <span id="weaponVal" class="text-amber-400 font-bold">Assault Rifle</span></div>
         </div>
-        <div class="text-center font-mono text-emerald-500 font-bold text-xs tracking-widest">
-            ZONE <span id="levelVal">1</span>
+        <div class="text-center font-mono text-red-500 font-bold text-xs tracking-widest animate-pulse">
+            ZONE SHRINK IN: <span id="zoneTimer">30</span>s
         </div>
-        <div class="flex items-center space-x-3 md:space-x-6">
-            <div>HOSTILES: <span id="enemyVal" class="text-red-400 font-bold">0</span></div>
-            <div>SCORE: <span id="scoreVal" class="text-zinc-200 font-bold">0</span></div>
+        <div class="flex items-center space-x-3 md:space-x-5">
+            <div>ALIVE: <span id="enemyVal" class="text-red-400 font-bold">0</span></div>
+            <div>KILLS: <span id="killVal" class="text-zinc-200 font-bold">0</span></div>
         </div>
     </div>
 
-    <!-- Game Canvas Container -->
+    <!-- Game Arena -->
     <div class="relative flex-grow flex items-center justify-center w-full overflow-hidden">
-        <canvas id="gameCanvas" width="850" height="460" class="rounded-xl border border-zinc-800 max-w-full max-h-[62vh]"></canvas>
+        <canvas id="gameCanvas" width="900" height="480" class="rounded-xl border border-zinc-800 max-w-full max-h-[62vh]"></canvas>
         
-        <!-- Mission Overlay Screen -->
+        <!-- Overlay Screen -->
         <div id="overlay" class="absolute inset-0 bg-zinc-950/95 flex flex-col items-center justify-center space-y-4 p-4 rounded-xl backdrop-blur-md">
-            <h1 id="overlayTitle" class="text-lg md:text-2xl font-bold tracking-widest text-emerald-400 text-center">TACTICAL SURVIVAL ARENA</h1>
-            <p id="overlayDesc" class="text-[11px] md:text-xs text-zinc-400 text-center max-w-md">Engage hostile tactical units. Scavenge advanced weapons, deploy medikits dynamically, and survive escalating combat tiers.</p>
-            <button id="actionBtn" onclick="startGame()" class="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-zinc-950 font-bold text-xs tracking-widest rounded-lg transition-all shadow-lg shadow-emerald-950/50">
-                INITIATE COMBAT
+            <h1 id="overlayTitle" class="text-xl md:text-3xl font-extrabold tracking-widest text-red-500 text-center drop-shadow-lg">FREE FIRE // BATTLE ROYALE</h1>
+            <p id="overlayDesc" class="text-[11px] md:text-xs text-zinc-400 text-center max-w-md">Scavenge weapons & medikits. Escape the shrinking electric zone. Eliminate all rival hostiles to secure Booyah!</p>
+            <button id="actionBtn" onclick="startGame()" class="px-7 py-3.5 bg-red-600 hover:bg-red-500 text-white font-black text-xs tracking-widest rounded-xl transition-all shadow-lg shadow-red-950/80">
+                DROP INTO BATTLE
             </button>
         </div>
     </div>
 
-    <!-- Mobile Touch Controls Bar -->
-    <div class="w-full max-w-[850px] flex justify-between items-center px-4 py-2.5 bg-zinc-900/95 border border-zinc-800/80 rounded-xl mb-1 shadow-lg">
+    <!-- Mobile Controls Bar (Free Fire Style) -->
+    <div class="w-full max-w-[900px] flex justify-between items-center px-4 py-2.5 bg-zinc-900/95 border border-zinc-800 rounded-xl mb-1 shadow-xl">
         <!-- Virtual D-Pad -->
         <div class="grid grid-cols-3 gap-1 w-36 h-24">
             <div></div>
-            <button id="btnUp" class="bg-zinc-800/90 active:bg-emerald-600 rounded-lg text-zinc-300 font-bold flex items-center justify-center text-sm shadow">▲</button>
+            <button id="btnUp" class="bg-zinc-800 active:bg-red-600 rounded-lg text-zinc-300 font-bold flex items-center justify-center text-sm shadow">▲</button>
             <div></div>
-            <button id="btnLeft" class="bg-zinc-800/90 active:bg-emerald-600 rounded-lg text-zinc-300 font-bold flex items-center justify-center text-sm shadow">◀</button>
-            <button id="btnDown" class="bg-zinc-800/90 active:bg-emerald-600 rounded-lg text-zinc-300 font-bold flex items-center justify-center text-sm shadow">▼</button>
-            <button id="btnRight" class="bg-zinc-800/90 active:bg-emerald-600 rounded-lg text-zinc-300 font-bold flex items-center justify-center text-sm shadow">▶</button>
+            <button id="btnLeft" class="bg-zinc-800 active:bg-red-600 rounded-lg text-zinc-300 font-bold flex items-center justify-center text-sm shadow">◀</button>
+            <button id="btnDown" class="bg-zinc-800 active:bg-red-600 rounded-lg text-zinc-300 font-bold flex items-center justify-center text-sm shadow">▼</button>
+            <button id="btnRight" class="bg-zinc-800 active:bg-red-600 rounded-lg text-zinc-300 font-bold flex items-center justify-center text-sm shadow">▶</button>
         </div>
-        <!-- Action Control Buttons -->
+        <!-- Action Buttons -->
         <div class="flex space-x-3">
-            <button id="btnMed" onclick="useMedikit()" class="px-4 py-3 bg-emerald-700/90 active:bg-emerald-500 text-white font-bold text-[10px] md:text-xs rounded-xl shadow-lg border border-emerald-500/30">
+            <button id="btnMed" onclick="useMedikit()" class="px-4 py-3 bg-emerald-700 active:bg-emerald-500 text-white font-bold text-[10px] md:text-xs rounded-xl shadow-lg border border-emerald-500/30">
                 MEDIKIT (<span id="medCount">2</span>)
             </button>
-            <button id="btnShoot" class="px-7 py-3 bg-red-600 active:bg-red-500 text-white font-bold text-xs tracking-wider rounded-xl shadow-lg border border-red-500/30">
+            <button id="btnSprint" class="px-4 py-3 bg-cyan-700 active:bg-cyan-500 text-white font-bold text-[10px] md:text-xs rounded-xl shadow-lg border border-cyan-500/30">
+                SPRINT
+            </button>
+            <button id="btnShoot" class="px-7 py-3 bg-red-600 active:bg-red-500 text-white font-black text-xs tracking-wider rounded-xl shadow-lg border border-red-500/30">
                 FIRE
             </button>
         </div>
@@ -68,23 +72,32 @@
         const ctx = canvas.getContext("2d");
 
         let gameState = "START";
-        let score = 0;
-        let level = 1;
+        let kills = 0;
+        let matchTimer = 40;
         let medikitsHeld = 2;
         let screenShake = 0;
 
+        // Safe Zone (Battle Royale Circle)
+        let zone = {
+            x: 450, y: 240,
+            radius: 450,
+            targetRadius: 180,
+            shrinking: false
+        };
+
         let player = {
-            x: 425,
-            y: 230,
+            x: 450, y: 240,
             radius: 12,
-            speed: 3.4,
+            baseSpeed: 2.8,
+            speed: 2.8,
             hp: 200,
             maxHp: 200,
+            armor: 100,
             angle: 0,
-            weapon: "Tactical Rifle",
-            fireRate: 200,
+            weapon: "Assault Rifle",
+            fireRate: 180,
             lastShot: 0,
-            damage: 35
+            damage: 30
         };
 
         let bullets = [];
@@ -93,7 +106,7 @@
         let particles = [];
         let muzzleFlashes = [];
 
-        let moveUp = false, moveDown = false, moveLeft = false, moveRight = false, isFiring = false;
+        let moveUp = false, moveDown = false, moveLeft = false, moveRight = false, isFiring = false, isSprinting = false;
 
         const bindTouch = (id, startCb, endCb) => {
             const el = document.getElementById(id);
@@ -108,61 +121,74 @@
         bindTouch("btnLeft", () => moveLeft = true, () => moveLeft = false);
         bindTouch("btnRight", () => moveRight = true, () => moveRight = false);
         bindTouch("btnShoot", () => isFiring = true, () => isFiring = false);
+        bindTouch("btnSprint", () => { isSprinting = true; player.speed = player.baseSpeed * 1.8; }, () => { isSprinting = false; player.speed = player.baseSpeed; });
 
         function startGame() {
-            score = 0;
-            level = 1;
+            kills = 0;
+            matchTimer = 40;
             player.hp = 200;
-            player.weapon = "Tactical Rifle";
-            player.damage = 35;
-            player.fireRate = 200;
+            player.armor = 100;
+            player.x = canvas.width / 2;
+            player.y = canvas.height / 2;
             medikitsHeld = 2;
+            zone.radius = 500;
+            zone.shrinking = false;
+
             document.getElementById("overlay").classList.add("hidden");
             gameState = "PLAYING";
-            initLevel();
+            initMatch();
+
+            // Zone countdown timer
+            clearInterval(window.zoneInterval);
+            window.zoneInterval = setInterval(() => {
+                if (gameState === "PLAYING" && matchTimer > 0) {
+                    matchTimer--;
+                    document.getElementById("zoneTimer").innerText = matchTimer;
+                    if (matchTimer <= 0) {
+                        zone.shrinking = true;
+                    }
+                }
+            }, 1000);
         }
 
-        function initLevel() {
+        function initMatch() {
             enemies = [];
             items = [];
             bullets = [];
             
-            let enemyCount = 4 + level * 2;
-            for (let i = 0; i < enemyCount; i++) {
+            // Spawn 10 enemies across map
+            for (let i = 0; i < 10; i++) {
                 let ex, ey;
                 do {
                     ex = Math.random() * (canvas.width - 80) + 40;
                     ey = Math.random() * (canvas.height - 80) + 40;
-                } while (Math.hypot(ex - player.x, ey - player.y) < 140);
+                } while (Math.hypot(ex - player.x, ey - player.y) < 160);
 
                 enemies.push({
-                    x: ex,
-                    y: ey,
-                    radius: 14,
-                    speed: 1.3 + level * 0.18,
-                    hp: 45 + level * 15,
-                    maxHp: 45 + level * 15,
-                    damage: 10 + level * 2.5,
-                    color: level > 2 ? '#ef4444' : '#f97316'
+                    x: ex, y: ey,
+                    radius: 13,
+                    speed: 1.4 + Math.random() * 0.5,
+                    hp: 60, maxHp: 60,
+                    damage: 12,
+                    color: '#ef4444'
                 });
             }
 
-            // Spawn Medikits
-            for (let i = 0; i < 2; i++) {
+            // Spawn Loot Crates & Medikits
+            for (let i = 0; i < 4; i++) {
                 items.push({
-                    x: Math.random() * 750 + 50,
-                    y: Math.random() * 380 + 40,
-                    type: 'medikit',
-                    radius: 10
+                    x: Math.random() * 800 + 50,
+                    y: Math.random() * 400 + 40,
+                    type: Math.random() > 0.5 ? 'medikit' : 'armor',
+                    radius: 11
                 });
             }
-
             updateHUD();
         }
 
         function useMedikit() {
             if (medikitsHeld > 0 && player.hp < player.maxHp) {
-                player.hp = Math.min(player.maxHp, player.hp + 75);
+                player.hp = Math.min(player.maxHp, player.hp + 80);
                 medikitsHeld--;
                 spawnParticles(player.x, player.y, '#10b981', 12);
                 updateHUD();
@@ -171,14 +197,13 @@
 
         function updateHUD() {
             document.getElementById("hpVal").innerText = Math.max(0, Math.floor(player.hp));
-            document.getElementById("weaponVal").innerText = player.weapon;
-            document.getElementById("levelVal").innerText = level;
+            document.getElementById("armorVal").innerText = Math.floor(player.armor);
             document.getElementById("enemyVal").innerText = enemies.length;
-            document.getElementById("scoreVal").innerText = score;
+            document.getElementById("killVal").innerText = kills;
             document.getElementById("medCount").innerText = medikitsHeld;
         }
 
-        function spawnParticles(x, y, color, count = 6) {
+        function spawnParticles(x, y, color, count = 5) {
             for (let i = 0; i < count; i++) {
                 particles.push({
                     x: x, y: y,
@@ -194,19 +219,18 @@
             let now = Date.now();
             if (now - player.lastShot < player.fireRate) return;
             player.lastShot = now;
-            screenShake = 4; // Add realistic recoil screen shake
+            screenShake = 3;
 
             let angle = player.angle;
             bullets.push({
                 x: player.x + Math.cos(angle) * 15,
                 y: player.y + Math.sin(angle) * 15,
-                vx: Math.cos(angle) * 12,
-                vy: Math.sin(angle) * 12,
+                vx: Math.cos(angle) * 13,
+                vy: Math.sin(angle) * 13,
                 damage: player.damage,
-                range: 550
+                range: 600
             });
 
-            // Muzzle flash effect
             muzzleFlashes.push({
                 x: player.x + Math.cos(angle) * 22,
                 y: player.y + Math.sin(angle) * 22,
@@ -219,6 +243,18 @@
 
             if (screenShake > 0) screenShake--;
 
+            // Zone Shrink Logic
+            if (zone.shrinking && zone.radius > zone.targetRadius) {
+                zone.radius -= 0.15;
+            }
+
+            // Check if player is outside safe zone (Electric damage)
+            let distFromCenter = Math.hypot(player.x - zone.x, player.y - zone.y);
+            if (distFromCenter > zone.radius) {
+                player.hp -= 0.25; // Zone damage over time
+                if (player.hp <= 0) gameOver("Eliminated by Electric Zone!");
+            }
+
             let dx = 0, dy = 0;
             if (moveUp) dy -= 1;
             if (moveDown) dy += 1;
@@ -230,7 +266,7 @@
             player.x = Math.max(player.radius, Math.min(canvas.width - player.radius, player.x + dx * player.speed));
             player.y = Math.max(player.radius, Math.min(canvas.height - player.radius, player.y + dy * player.speed));
 
-            // Realistic Auto-Target Nearest Enemy
+            // Auto-Aim nearest enemy
             if (enemies.length > 0) {
                 let closest = enemies[0];
                 let minDist = Math.hypot(closest.x - player.x, closest.y - player.y);
@@ -247,9 +283,7 @@
             for (let i = bullets.length - 1; i >= 0; i--) {
                 let b = bullets[i];
                 b.x += b.vx; b.y += b.vy; b.range -= Math.hypot(b.vx, b.vy);
-                if (b.range <= 0 || b.x < 0 || b.x > canvas.width || b.y < 0 || b.y > canvas.height) {
-                    bullets.splice(i, 1); continue;
-                }
+                if (b.range <= 0) { bullets.splice(i, 1); continue; }
 
                 for (let j = enemies.length - 1; j >= 0; j--) {
                     let e = enemies[j];
@@ -259,11 +293,9 @@
                         bullets.splice(i, 1);
                         if (e.hp <= 0) {
                             spawnParticles(e.x, e.y, '#ef4444', 12);
-                            score += 150 * level;
+                            kills++;
                             enemies.splice(j, 1);
-                            if (Math.random() < 0.4) {
-                                medikitsHeld++; // Scavenge medikit from fallen enemy
-                            }
+                            if (Math.random() < 0.45) medikitsHeld++;
                         }
                         break;
                     }
@@ -277,30 +309,30 @@
                 e.y += Math.sin(angle) * e.speed;
 
                 if (Math.hypot(player.x - e.x, player.y - e.y) < player.radius + e.radius) {
-                    player.hp -= e.damage * 0.05;
-                    screenShake = 6;
-                    if (player.hp <= 0) gameOver();
+                    if (player.armor > 0) player.armor -= 0.4;
+                    else player.hp -= e.damage * 0.05;
+                    screenShake = 5;
+                    if (player.hp <= 0) gameOver("Eliminated in Combat!");
                 }
             }
 
-            // Items collection
+            // Items looting
             for (let i = items.length - 1; i >= 0; i--) {
                 let item = items[i];
                 if (Math.hypot(player.x - item.x, player.y - item.y) < player.radius + item.radius) {
-                    if (item.type === 'medikit') {
-                        medikitsHeld++;
-                        spawnParticles(player.x, player.y, '#10b981', 8);
-                    }
+                    if (item.type === 'medikit') medikitsHeld++;
+                    else if (item.type === 'armor') player.armor = Math.min(100, player.armor + 50);
+                    spawnParticles(player.x, player.y, '#38bdf8', 8);
                     items.splice(i, 1);
                 }
             }
 
+            // Check Victory (BOOYAH!)
             if (enemies.length === 0) {
-                level++;
-                gameState = "LEVEL_TRANSITION";
-                document.getElementById("overlayTitle").innerText = `ZONE ${level - 1} SECURED`;
-                document.getElementById("overlayDesc").innerText = `Hostiles neutralized. Tactical tier ${level} incoming.`;
-                document.getElementById("actionBtn").innerText = `ADVANCE TO ZONE ${level}`;
+                gameState = "VICTORY";
+                document.getElementById("overlayTitle").innerText = "🏆 BOOYAH! VICTORY 🏆";
+                document.getElementById("overlayDesc").innerText = `Outstanding tactical survival! Total Kills: ${kills}`;
+                document.getElementById("actionBtn").innerText = "PLAY AGAIN";
                 document.getElementById("overlay").classList.remove("hidden");
             }
 
@@ -309,63 +341,50 @@
 
         function draw() {
             ctx.save();
-            // Apply Realistic Screen Shake Transform
             if (screenShake > 0) {
-                let sx = (Math.random() - 0.5) * screenShake * 2;
-                let sy = (Math.random() - 0.5) * screenShake * 2;
-                ctx.translate(sx, sy);
+                ctx.translate((Math.random() - 0.5) * screenShake * 2, (Math.random() - 0.5) * screenShake * 2);
             }
 
-            ctx.fillStyle = "#07070c";
+            ctx.fillStyle = "#06060a";
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Tactical Grid Background
-            ctx.strokeStyle = "#11111c";
-            ctx.lineWidth = 1;
-            for (let x = 0; x < canvas.width; x += 45) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke(); }
-            for (let y = 0; y < canvas.height; y += 45) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke(); }
+            // Battle Royale Shrinking Electric Zone Border
+            ctx.beginPath();
+            ctx.arc(zone.x, zone.y, zone.radius, 0, Math.PI * 2);
+            ctx.strokeStyle = "rgba(59, 130, 246, 0.7)";
+            ctx.lineWidth = 3;
+            ctx.stroke();
+            ctx.fillStyle = "rgba(59, 130, 246, 0.03)";
+            ctx.fill();
 
-            // Items Glow
+            // Loot Items
             for (let item of items) {
                 ctx.save();
                 ctx.translate(item.x, item.y);
-                ctx.shadowColor = "#10b981";
-                ctx.shadowBlur = 10;
-                ctx.fillStyle = "#10b981"; ctx.fillRect(-7, -7, 14, 14);
-                ctx.fillStyle = "#ffffff"; ctx.fillRect(-2, -5, 4, 10); ctx.fillRect(-5, -2, 10, 4);
+                ctx.fillStyle = item.type === 'medikit' ? '#10b981' : '#0ea5e9';
+                ctx.beginPath(); ctx.arc(0, 0, item.radius, 0, Math.PI * 2); ctx.fill();
                 ctx.restore();
             }
 
-            // Bullets Glow
-            ctx.shadowColor = "#facc15";
-            ctx.shadowBlur = 8;
+            // Bullets
             ctx.fillStyle = "#facc15";
-            for (let b of bullets) { ctx.beginPath(); ctx.arc(b.x, b.y, 3.5, 0, Math.PI * 2); ctx.fill(); }
-            ctx.shadowBlur = 0;
+            for (let b of bullets) { ctx.beginPath(); ctx.arc(b.x, b.y, 3, 0, Math.PI * 2); ctx.fill(); }
 
-            // Enemies Rendering
+            // Enemies
             for (let e of enemies) {
                 ctx.save();
                 ctx.translate(e.x, e.y);
-                ctx.shadowColor = e.color;
-                ctx.shadowBlur = 10;
                 ctx.fillStyle = e.color; ctx.beginPath(); ctx.arc(0, 0, e.radius, 0, Math.PI * 2); ctx.fill();
-                
-                // Enemy Health bar
-                ctx.fillStyle = "rgba(0,0,0,0.6)"; ctx.fillRect(-14, -22, 28, 4);
-                ctx.fillStyle = "#ef4444"; ctx.fillRect(-14, -22, (e.hp / e.maxHp) * 28, 4);
+                ctx.fillStyle = "rgba(0,0,0,0.6)"; ctx.fillRect(-12, -20, 24, 4);
+                ctx.fillStyle = "#ef4444"; ctx.fillRect(-12, -20, (e.hp / e.maxHp) * 24, 4);
                 ctx.restore();
             }
 
-            // Player Rendering
+            // Player
             ctx.save();
             ctx.translate(player.x, player.y);
             ctx.rotate(player.angle);
-            // Gun Barrel
-            ctx.fillStyle = "#52525b"; ctx.fillRect(2, -3, 18, 5);
-            // Player Body Glow
-            ctx.shadowColor = "#10b981";
-            ctx.shadowBlur = 12;
+            ctx.fillStyle = "#52525b"; ctx.fillRect(2, -3, 16, 5);
             ctx.fillStyle = "#10b981"; ctx.beginPath(); ctx.arc(0, 0, player.radius, 0, Math.PI * 2); ctx.fill();
             ctx.strokeStyle = "#047857"; ctx.lineWidth = 2.5; ctx.stroke();
             ctx.restore();
@@ -374,7 +393,7 @@
             for (let i = muzzleFlashes.length - 1; i >= 0; i--) {
                 let mf = muzzleFlashes[i];
                 ctx.fillStyle = "#fef08a";
-                ctx.beginPath(); ctx.arc(mf.x, mf.y, 8, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(mf.x, mf.y, 7, 0, Math.PI * 2); ctx.fill();
                 mf.life--;
                 if (mf.life <= 0) muzzleFlashes.splice(i, 1);
             }
@@ -392,11 +411,11 @@
             ctx.restore();
         }
 
-        function gameOver() {
+        function gameOver(reason) {
             gameState = "GAMEOVER";
-            document.getElementById("overlayTitle").innerText = "MISSION FAILED";
-            document.getElementById("overlayDesc").innerText = `Final Score: ${score} | Reached Zone: ${level}`;
-            document.getElementById("actionBtn").innerText = "RE-ENGAGE MISSION";
+            document.getElementById("overlayTitle").innerText = "YOU DIED";
+            document.getElementById("overlayDesc").innerText = `${reason} | Kills: ${kills}`;
+            document.getElementById("actionBtn").innerText = "TRY AGAIN";
             document.getElementById("overlay").classList.remove("hidden");
         }
 
@@ -405,3 +424,4 @@
     </script>
 </body>
 </html>
+    
